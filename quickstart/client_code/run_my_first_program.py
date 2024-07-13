@@ -3,35 +3,35 @@ from nada_dsl import *
 
 def nada_main():
 
-    # 0. Compiled-time constants
-    nr_voters = 3
-    nr_candidates = 2
+    # 0. Constants for configuration
+    number_of_voters = 3
+    number_of_candidates = 2
 
-    # 1. Parties initialization
-    voters = []
-    for i in range(nr_voters):
-        voters.append(Party(name="Voter" + str(i)))
-    outparty = Party(name="OutParty")
+    # 1. Initialize parties
+    voter_parties = [
+        Party(name=f"VoterParty{idx}") for idx in range(number_of_voters)
+    ]
+    result_party = Party(name="ResultParty")
 
-    # 2. Inputs initialization
-    votes_per_candidate = []
-    for c in range(nr_candidates):
-        votes_per_candidate.append([])
-        for v in range(nr_voters):
-            votes_per_candidate[c].append(
-                SecretUnsignedInteger(
-                    Input(name="v" + str(v) + "_c" + str(c), party=voters[v])
-                )
-            )
+    # 2. Initialize inputs
+    votes_count_per_candidate = [
+        [
+            SecretUnsignedInteger(
+                Input(name=f"vote_{voter}_candidate_{candidate}", party=voter_parties[voter])
+            ) for voter in range(number_of_voters)
+        ] for candidate in range(number_of_candidates)
+    ]
 
-    # 3. Computation
-    results = []
-    for c in range(nr_candidates):
-        result = votes_per_candidate[c][0]
-        for v in range(1, nr_voters):
-            ## Add votes for candidate c
-            result += votes_per_candidate[c][v]
-        # 4. Output
-        results.append(Output(result, "final_vote_count_c" + str(c), outparty))
+    # 3. Calculate results
+    final_counts = []
+    for candidate in range(number_of_candidates):
+        total_votes = votes_count_per_candidate[candidate][0]
+        for voter in range(1, number_of_voters):
+            # Aggregate votes for candidate
+            total_votes += votes_count_per_candidate[candidate][voter]
+        # 4. Output final vote counts
+        final_counts.append(
+            Output(total_votes, f"final_count_candidate_{candidate}", result_party)
+        )
 
-    return results
+    return final_counts
